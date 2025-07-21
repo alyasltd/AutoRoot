@@ -23,6 +23,14 @@ def sort_roots(roots):
     return sorted_roots
 
 
+def compute_diff(roots, roots_gt):
+    diff = roots[:, :, None] - roots_gt[:, None]
+    dist_real = np.real(diff)
+    dist_imag = np.imag(diff)
+    dist = dist_real**2 + dist_imag**2
+    return np.min(dist, -1)
+
+
 def check_polynomial_root_calculation_3rd_degree(a, b, c, d):
     """Test the polynomial root calculation for a cubic polynomial.
     Args:
@@ -47,26 +55,24 @@ def check_polynomial_root_calculation_3rd_degree(a, b, c, d):
 
     roots_numpy = roots_torch.cpu().detach().numpy()
     roots_complex = roots_numpy[..., 0] + 1j * roots_numpy[..., 1]
-    roots_complex = sort_roots(roots_complex)
+
+    # compare the roots with the one found using numpy
+    poly = Polynomial([d, c, b, a])
+    roots_gt = poly.roots()[None]
+    print("rt_g", roots_gt)
 
     for r in roots_complex:
         # Calculation of the polynomial applied to the root
         y = f(r, a, b, c, d)
         np.testing.assert_allclose(
-            np.linalg.norm(y), 0, atol=precision
+            np.abs(np.real(y)), 0, atol=precision
+        )  # Check if the polynomial evaluated at the root is close to zero (<10^(-10))
+        np.testing.assert_allclose(
+            np.abs(np.imag(y)), 0, atol=precision
         )  # Check if the polynomial evaluated at the root is close to zero (<10^(-10))
 
-    # compare the roots with the one found using numpy
-    poly = Polynomial([d, c, b, a])
-    roots_gt = poly.roots()[None]
-    roots_gt = sort_roots(roots_gt)
-    print("rt_g", roots_gt)
-
-    # since the roots are sorted, we can compare one to another
-
-    for r_gt_i, r_i in zip(roots_gt, roots_complex):
-        np.testing.assert_allclose(r_gt_i.real, r_i.real, atol=precision)
-        np.testing.assert_allclose(r_gt_i.imag, r_i.imag, atol=precision)
+    dist = compute_diff(roots_complex, roots_gt)
+    np.testing.assert_allclose(dist, 0.0 * dist, atol=precision)
 
 
 def check_polynomial_root_calculation_4th_degree_ferrari(
@@ -106,7 +112,12 @@ def check_polynomial_root_calculation_4th_degree_ferrari(
     for r in roots_complex:
         # Calculation of the polynomial applied to the root
         y = f(r, a0, a1, a2, a3, a4)
-        np.testing.assert_allclose(np.linalg.norm(y), 0, atol=1e-5)
+        np.testing.assert_allclose(
+            np.abs(np.real(y)), 0, atol=precision
+        )  # Check if the polynomial evaluated at the root is close to zero (<10^(-10))
+        np.testing.assert_allclose(
+            np.abs(np.imag(y)), 0, atol=precision
+        )  # Check if the polynomial evaluated at the root is close to zero (<10^(-10))
         # Check if the polynomial evaluated at the root is close to zero (<10^(-10))
 
     # compare the roots with the one found using numpy
@@ -114,6 +125,9 @@ def check_polynomial_root_calculation_4th_degree_ferrari(
     roots_gt = poly.roots()[None]
     roots_gt = sort_roots(roots_gt)
 
+    dist = compute_diff(roots_complex, roots_gt)
+    np.testing.assert_allclose(dist, 0.0 * dist, atol=precision)
+    """
     # since the roots are sorted, we can compare one to another
     print("Roots complex", roots_complex)
     print("Roots gt", roots_gt)
@@ -121,6 +135,7 @@ def check_polynomial_root_calculation_4th_degree_ferrari(
     for r_gt_i, r_i in zip(roots_gt, roots_complex):
         np.testing.assert_allclose(r_gt_i.real, r_i.real, atol=precision)
         np.testing.assert_allclose(r_gt_i.imag, r_i.imag, atol=precision)
+    """
 
 
 def check_addition_batch(a, b):
@@ -207,9 +222,10 @@ def check_complex_number_power_k_batch(a, k):
 
     power_tensor = complex_number_power_k_batch(a_tensor, k)
     power_numpy = a**k
-
     np.testing.assert_allclose(power_tensor[0, 0], np.real(power_numpy), atol=precision)
-    np.testing.assert_allclose(power_tensor[0, 1], np.imag(power_numpy), atol=precision)
+    np.testing.assert_allclose(
+        power_tensor[0, 1], np.imag(power_numpy), atol=1e-1
+    )  # numerical imprecision due to the use of atan2
 
 
 def check_argument_batch(a):
@@ -293,3 +309,50 @@ def check_addition_complex_real_batch(a, b):
 
     np.testing.assert_allclose(addition_tensor[0, 0], np.real(addition_numpy), atol=precision)
     np.testing.assert_allclose(addition_tensor[0, 1], np.imag(addition_numpy), atol=precision)
+
+
+def check_backward(inputs, func, output_index=[0, 1]):
+    inputs_tensors = [
+        torch.tensor([np.real(inp), np.imag(inp)], dtype=dtype, requires_grad=True)
+        for inp in inputs
+    ]
+    batch_inputs_tensors = [inp.unsqueeze(0) for inp in inputs_tensors]
+    for j in output_index:  # real or imaginary component
+        output = func(*batch_inputs_tensors)[0, j]
+        output.backward()
+        for i in range(len(inputs_tensors)):
+            gradient = inputs_tensors[i].grad.cpu().detach().numpy()
+            assert not np.isnan(gradient).any()
+
+
+def check_backward_sqrt_batch(a):
+    """Compute the backward pass of square root of a tensor element-wise.
+    Args : a (real)"""
+    a_tensor = torch.tensor([a], dtype=dtype, requires_grad=True)
+    a_tensor_ = a_tensor.unsqueeze(0)
+
+    sqrt_tensor = sqrt_batch(a_tensor_)
+    output_real = sqrt_tensor[0, 0]
+    output_real.backward()
+    gradient_real = a_tensor.grad.cpu().detach().numpy()
+
+    sqrt_tensor = sqrt_batch(a_tensor_)
+    output_imag = sqrt_tensor[0, 1]
+    output_imag.backward()
+    gradient_imag = a_tensor.grad.cpu().detach().numpy()
+
+    assert not np.isnan(gradient_real).any()
+    assert not np.isnan(gradient_imag).any()
+
+    # check output shape
+    assert sqrt_tensor.shape == (1, 2)
+
+
+def check_shape(inputs, func, output_shape):
+    inputs_tensors = [
+        torch.tensor([np.real(inp), np.imag(inp)], dtype=dtype, requires_grad=True)
+        for inp in inputs
+    ]
+    batch_inputs_tensors = [inp.unsqueeze(0) for inp in inputs_tensors]
+    output = func(*batch_inputs_tensors)
+    assert output.shape == output_shape

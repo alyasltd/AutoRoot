@@ -13,6 +13,7 @@ from .conftest import check_polynomial_root_calculation_4th_degree_ferrari
         (1, 3, -4, 1, 1),  # 2 reals roots, 2 complex conjugates
         (1, 0, 0, 0, 1),  # 4 complex roots
         (1, -2, 7, -8, 1),  # 2 reals roots, 2 complex conjugates
+        (0.0, -6, 11, -6, 1),  #
     ],
 )
 def test_quartic(a0, a1, a2, a3, a4):

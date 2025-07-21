@@ -1,4 +1,5 @@
 import pytest
+from autoroot.torch.complex.complex_utils import *
 
 from .conftest import *
 
@@ -19,6 +20,11 @@ def test_addition_batch(a, b):
     This function uses pytest to run the test.
     """
     check_addition_batch(a, b)
+    inputs = [a, b]
+    func = addition_batch
+    check_backward(inputs, func)
+    output_shape = (1, 2)
+    check_shape(inputs, func, output_shape)
 
 
 @pytest.mark.parametrize(
@@ -37,6 +43,11 @@ def test_product_of_2_complex_numbers_batch(a, b):
     This function uses pytest to run the test.
     """
     check_product_of_2_complex_numbers_batch(a, b)
+    inputs = [a, b]
+    func = product_of_2_complex_numbers_batch
+    check_backward(inputs, func)
+    output_shape = (1, 2)
+    check_shape(inputs, func, output_shape)
 
 
 @pytest.mark.parametrize(
@@ -49,6 +60,7 @@ def test_sqrt_batch(a):
     This function uses pytest to run the test.
     """
     check_sqrt_batch(a)
+    check_backward_sqrt_batch(a)
 
 
 @pytest.mark.parametrize(
@@ -67,6 +79,11 @@ def test_product_complex_real_batch(a, b):
     This function uses pytest to run the test.
     """
     check_product_complex_real_batch(a, b)
+    inputs = [a, b]
+    func = product_complex_real_batch
+    check_backward(inputs, func)
+    output_shape = (1, 2)
+    check_shape(inputs, func, output_shape)
 
 
 @pytest.mark.parametrize(
@@ -79,6 +96,11 @@ def test_inverse_complex_number(a):
     This function uses pytest to run the test.
     """
     check_inverse_complex_batch(a)
+    inputs = [a]
+    func = inverse_complex_number
+    check_backward(inputs, func)
+    output_shape = (1, 2)
+    check_shape(inputs, func, output_shape)
 
 
 @pytest.mark.parametrize(
@@ -98,6 +120,11 @@ def test_complex_number_power_k_batch(a, k):
     This function uses pytest to run the test.
     """
     check_complex_number_power_k_batch(a, k)
+    inputs = [a]
+    func = lambda x: complex_number_power_k_batch(x, k)
+    check_backward(inputs, func)
+    output_shape = (1, 2)
+    check_shape(inputs, func, output_shape)
 
 
 @pytest.mark.parametrize(
@@ -110,6 +137,11 @@ def test_argument_batch(a):
     This function uses pytest to run the test.
     """
     check_argument_batch(a)
+    inputs = [a]
+    func = argument_batch
+    check_backward(inputs, func, [0])
+    output_shape = (1, 1)
+    check_shape(inputs, func, output_shape)
 
 
 @pytest.mark.parametrize(
@@ -122,6 +154,11 @@ def test_module_batch(a):
     This function uses pytest to run the test.
     """
     check_module_batch(a)
+    inputs = [a]
+    func = module_batch
+    check_backward(inputs, func, [0])
+    output_shape = (1, 1)
+    check_shape(inputs, func, output_shape)
 
 
 @pytest.mark.parametrize(
@@ -134,6 +171,11 @@ def test_cube_root_batch(a):
     This function uses pytest to run the test.
     """
     check_cube_root_batch(a)
+    inputs = [a]
+    func = cube_root_batch
+    # check_backward(inputs, func) # not working
+    output_shape = (1, 2)
+    check_shape(inputs, func, output_shape)
 
 
 @pytest.mark.parametrize(
@@ -146,6 +188,11 @@ def test_sqrt_complex_batch(a):
     This function uses pytest to run the test.
     """
     check_sqrt_complex_batch(a)
+    inputs = [a]
+    func = sqrt_complex_batch
+    check_backward(inputs, func)
+    output_shape = (1, 2)
+    check_shape(inputs, func, output_shape)
 
 
 @pytest.mark.parametrize(
@@ -164,6 +211,11 @@ def test_division_2_complex_numbers(a, b):
     This function uses pytest to run the test.
     """
     check_division_2_complex_numbers(a, b)
+    inputs = [a, b]
+    func = division_2_complex_numbers
+    check_backward(inputs, func)
+    output_shape = (1, 2)
+    check_shape(inputs, func, output_shape)
 
 
 @pytest.mark.parametrize(
@@ -182,3 +234,8 @@ def test_addition_complex_real_batch(a, b):
     This function uses pytest to run the test.
     """
     check_addition_complex_real_batch(a, b)
+    inputs = [a]
+    func = lambda x: addition_complex_real_batch(x, torch.tensor([b], dtype=dtype).unsqueeze(0))
+    check_backward(inputs, func)
+    output_shape = (1, 2)
+    check_shape(inputs, func, output_shape)

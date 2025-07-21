@@ -42,8 +42,8 @@ def product_of_2_complex_numbers_batch(a: Tensor, b: Tensor) -> Tensor:
     # a = torch.tensor(batch_size*[a_real, a_imag])
     # b = torch.tensor(batch_size*[b_real, b_imag])
 
-    real_part: Tensor = a[:, 0] * b[:, 0] - a[:, 1] * b[:, 1]
-    imag_part: Tensor = a[:, 0] * b[:, 1] + a[:, 1] * b[:, 0]
+    real_part: Tensor = a[:, 0] * b[:, 0] - a[:, 1] * b[:, 1]  # (batch_size, )
+    imag_part: Tensor = a[:, 0] * b[:, 1] + a[:, 1] * b[:, 0]  # (batch_size, )
     return torch.stack([real_part, imag_part], dim=-1)  # (batch_size, 2)
 
 
@@ -59,10 +59,15 @@ def sqrt_batch(a: Tensor) -> Tensor:
         batch of real numbers, where the first element is the real part and the
         second element is the imaginary part.
     """
-    # a.shape = (batch_size,1)
-    # a is a tensor of real numbers, sqrt is element-wise
-    real_part: Tensor = torch.where(a >= 0, torch.sqrt(a), torch.tensor(0.0) * a)  # (batch_size,1)
-    imag_part: Tensor = torch.where(a < 0, torch.sqrt(-a), torch.tensor(0.0) * a)  # (batch_size,1)
+    eps = 1e-12
+
+    # Clamp absolute value to avoid sqrt(0) in backward pass
+    abs_a: Tensor = torch.clamp(torch.abs(a), min=eps)  # (batch_size,1)
+    sqrt_a: Tensor = torch.sqrt(abs_a)  # element-wise (batch_size,1)
+
+    # real if a >= 0, imaginary otherwise
+    real_part: Tensor = torch.where(a >= 0, sqrt_a, torch.zeros_like(a))  # (batch_size,1)
+    imag_part: Tensor = torch.where(a < 0, sqrt_a, torch.zeros_like(a))  # (batch_size,1)
 
     return torch.cat((real_part, imag_part), dim=1)  # (batch_size, 2)
 
@@ -86,8 +91,7 @@ def product_complex_real_batch(a: Tensor, b: Tensor) -> Tensor:
     """
     # a = torch.tensor(batch_size*[,a_real, a_imag]) # (batch_size, 2)
     # b is a real number (batch_size,1) # (batch_size, 1)
-
-    return torch.stack([a[:, 0] * b.squeeze(), a[:, 1] * b.squeeze()], dim=-1)  # (batch_size, 2)
+    return a * b  # (batch_size, 2)
 
 
 def inverse_complex_number(a: Tensor) -> Tensor:
@@ -133,17 +137,18 @@ def complex_number_power_k_batch(a: Tensor, k: int) -> Tensor:
     # a = torch.tensor(batch_size*[a_real, a_imag])
     # k is an integer
 
-    if k == 0:
-        return torch.tensor([1.0, 0.0]).repeat(a.shape[0], 1)  # (batch_size, 2)
-    elif k == 1:
-        return a
-    elif k < 0:
-        b_exp_sub_k: Tensor = complex_number_power_k_batch(a, -k)
-        return inverse_complex_number(b_exp_sub_k)
-    else:
-        result: Tensor = a
-        for _ in range(1, k):
-            result = product_of_2_complex_numbers_batch(result, a)
+    real_a: Tensor = a[:, :1]  # (batch_size, 1)
+    imag_a: Tensor = a[:, 1:]  # (batch_size, 1)
+    r: Tensor = torch.sqrt(real_a**2 + imag_a**2)
+    # eps_tensor: Tensor = torch.finfo(torch.float32).eps + torch.tensor(0.0)*real_a
+
+    theta: Tensor = torch.atan2(imag_a, real_a)  # safe even when real_a == 0
+
+    result_real: Tensor = r**k * torch.cos(theta * k)
+    result_imag: Tensor = r**k * torch.sin(theta * k)
+
+    result: Tensor = torch.cat((result_real, result_imag), dim=1)  # (batch_size, 2)
+
     return result
 
 
@@ -161,21 +166,27 @@ def argument_batch(a: Tensor) -> Tensor:  # potentiellemen pb si (0,0)
         batch of complex numbers, where each element is the angle in radians.
     """
     # a = torch.tensor(batch_size*[a_real, a_imag])
+    real: Tensor = a[:, :1]
+    imag: Tensor = a[:, 1:]
+    theta: Tensor = torch.atan2(imag, real)  # safe computation for all quadrants
+    return theta  # (batch_size, 1)
 
-    cas_a0_nul: Tensor = torch.where(
-        a[:, 1] > 0, torch.tensor(math.pi / 2), torch.tensor(-math.pi / 2)
-    )
-    cas_a0_negatif: Tensor = torch.where(
-        a[:, 1] >= 0,
-        torch.atan(a[:, 1] / a[:, 0]) + torch.tensor(math.pi),
-        torch.atan(a[:, 1] / a[:, 0]) - torch.tensor(math.pi),
-    )
 
-    cas_a0_negatif_ou_nul: Tensor = torch.where(a[:, 0] == 0, cas_a0_nul, cas_a0_negatif)
-
-    result: Tensor = torch.where(a[:, 0] > 0, torch.atan(a[:, 1] / a[:, 0]), cas_a0_negatif_ou_nul)
-
-    return result.unsqueeze(-1)  # (batch_size, 1)
+def module_batch_old(a: Tensor) -> Tensor:
+    """
+    Computes the modulus of a batch of complex numbers.
+    Each complex number is represented as a tensor of shape (batch_size, 2),
+    where the first element is the real part and the second element is the
+    imaginary part.
+    Args:
+        a : A tensor of shape (batch_size, 2) representing the batch of complex
+        numbers.
+    Returns:
+        A tensor of shape (batch_size, 1) representing the modulus of the
+        batch of complex numbers, where each element is the modulus.
+    """
+    # a = torch.tensor(batch_size*[a_real, a_imag])
+    return torch.sqrt(a[:, 0] ** 2 + a[:, 1] ** 2).unsqueeze(-1)  # (batch_size, 1)
 
 
 def module_batch(a: Tensor) -> Tensor:
@@ -248,21 +259,17 @@ def sqrt_complex_batch(a: Tensor) -> Tensor:
         batch of complex numbers, where the first element is the real part and
         the second element is the imaginary part.
     """
-    # a = torch.tensor(batch_size,[a_real, a_imag])
-    r: Tensor = module_batch(a)  # (batch_size, 1)
+    real: Tensor = a[:, :1]  # (batch_size, 1)
+    imag: Tensor = a[:, 1:]  # (batch_size, 1)
 
-    real_part: Tensor = torch.where(
-        r[:, 0] != 0.0,
-        torch.sqrt(r[:, 0]) * torch.cos(argument_batch(a)[:, 0] / 2),
-        r[:, 0] * 0.0,
-    )
-    imag_part: Tensor = torch.where(
-        r[:, 0] != 0.0,
-        torch.sqrt(r[:, 0]) * torch.sin(argument_batch(a)[:, 0] / 2),
-        r[:, 0] * 0.0,
-    )
+    r: Tensor = torch.sqrt(real**2 + imag**2)  # (batch_size, 1)             # Magnitude
+    theta: Tensor = torch.atan2(imag, real)  # (batch_size, 1)             # Argument
+    sqrt_r: Tensor = torch.sqrt(r)  # (batch_size, 1)                     # sqrt(magnitude)
+    half_theta: Tensor = theta / 2  # (batch_size, 1)
 
-    return torch.stack((real_part, imag_part), dim=-1)  # (batch_size, 2)
+    sqrt_real: Tensor = sqrt_r * torch.cos(half_theta)  # (batch_size, 1)
+    sqrt_imag: Tensor = sqrt_r * torch.sin(half_theta)  # (batch_size, 1)
+    return torch.cat([sqrt_real, sqrt_imag], dim=1)  # (batch_size, 2)
 
 
 def division_2_complex_numbers(a: Tensor, b: Tensor) -> Tensor:
