@@ -208,7 +208,7 @@ def module_batch(a: Tensor) -> Tensor:
 
 def cube_root_batch(a: Tensor) -> Tensor:
     """
-    Computes the cube root of a batch of real numbers.
+    Computes the cube root of a batch of complex numbers.
     Each number is represented as a tensor of shape (batch_size, 2),
     where the first element is the real part and the second element is the
     imaginary part.
