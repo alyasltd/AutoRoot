@@ -40,6 +40,9 @@ AutoRoot is a fast, fully differentiable PyTorch library for solving cubic and q
 - [Project Structure](#project-structure)
 - [Dependencies](#dependencies)
 - [Tests](#tests)
+- [Installation](#Installation)
+- [Contributing](#Contributing)
+- [Acknowledgments](#Acknowledgments)
 
 # Motivation
 AutoRoot serves as a standalone and versatile solution for anyone needing to solve polynomial equations of degrees 3 to 4 with *PyTorch*. This library leverages classical algebraic methods, specifically **Cardano's method** for cubic equations and **Ferrari's method** for quartic equations, to provide accurate and fully differentiable root solutions. The differentiability allows for seamless integration into PyTorch's autograd system, making it ideal for applications requiring gradient-based optimization and neural network integration.
@@ -82,7 +85,7 @@ roots_batch = solve_cubic(A, B, C, D)
 print("Batch cubic roots:", roots_batch)
 ```
 
-## 🔥 Tutorials
+# 🔥 Tutorials
 
 | **Tutorial Name**           | Notebook                                                                                                                                                           |
 | :-------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------: |
@@ -157,7 +160,7 @@ cd autoroot
 pip install .
 ```
 
-## 👍 Contributing
+# 👍 Contributing
 
 #To contribute, you can open an
 #[issue](https://github.com/Pruneeuh/AutoRoot/issues), or fork this
@@ -178,7 +181,7 @@ pip install tox
 ```
 
 
-## 🙏 Acknowledgments
+# 🙏 Acknowledgments
 
 <div align="right">
   <picture>
