@@ -93,7 +93,8 @@ print("Batch cubic roots:", roots_batch)
 
 # Project Structure :
 ```
-📂 autoroot/                    # Main source director
+📂 autoroot/
+
 ├── 📁 torch/                   # Torch-related implementations
 │   ├── 📁 complex/             # Complex functions utils
 │   │   ├── 📄 complex_utils.py
@@ -103,11 +104,20 @@ print("Batch cubic roots:", roots_batch)
 │   │   ├── 📄 quartic.py
 │   ├── 📄 types.py
 
+├── 📁 numpy/                   # Numpy-related implementations
+│   ├── 📄 cubic.py             # Cubic solver
+│   ├── 📄 quartic.py           # Quartic solver
+
 📂 tests/                        # Unit tests
 ├── 📄 conftest.py
 ├── 📄 test_cubic.py
 ├── 📄 test_quartic.py
 ├── 📄 test_complex.py
+├── 📄 test_polynomial_numpy.py
+
+
+📂 tutorials/
+├── 📄 Tutorial_1_cubic_solving_with_Cardano.ipynb
 
 📄 .pre-commit-config.yaml       # Pre-commit hooks config
 📄 pyproject.toml                # Build system and tool configs
