@@ -1,0 +1,1 @@
+from .cubic import polynomial_root_calculation_3rd_degree as solve_cubic
