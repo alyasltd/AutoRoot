@@ -1,0 +1,1 @@
+from .quartic import polynomial_root_calculation_4th_degree_ferrari as solve_quartic
